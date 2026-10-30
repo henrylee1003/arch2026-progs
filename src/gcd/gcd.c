@@ -1,36 +1,10 @@
 #include "gcd.h"
 
-/* Count trailing zeros of a nonzero x by binary search over the bit position:
- * five tests, no multiply and no table. RV32I has no ctz instruction.
- */
-static unsigned ctz32(uint32_t x)
-{
-    unsigned n = 0;
-    if (!(x & 0xFFFFu)) {
-        n += 16;
-        x >>= 16;
-    }
-    if (!(x & 0xFFu)) {
-        n += 8;
-        x >>= 8;
-    }
-    if (!(x & 0xFu)) {
-        n += 4;
-        x >>= 4;
-    }
-    if (!(x & 0x3u)) {
-        n += 2;
-        x >>= 2;
-    }
-    if (!(x & 0x1u))
-        n += 1;
-    return n;
-}
-
-/* Binary GCD (Stein): gcd(2a, 2b) = 2 gcd(a, b), gcd(2a, b) = gcd(a, b) for odd
- * b, and gcd(a, b) = gcd(|a - b|, min(a, b)) for odd a and b. The common power
- * of two is the trailing zeros of a | b; every factor of two left in an operand
- * is stripped in one ctz step instead of one bit at a time.
+/* Binary GCD (Stein), written from proc_a of Quiz 2 Problem A, which is the C
+ * baseline the assignment names. It uses gcd(2a, 2b) = 2 gcd(a, b),
+ * gcd(2a, b) = gcd(a, b) for odd b, and gcd(a, b) = gcd(b - a, a) for odd
+ * a <= b. Each loop strips one factor of two per pass, as the quiz does; the
+ * labels name the matching blocks of the quiz listing.
  */
 uint32_t gcd_u32(uint32_t a, uint32_t b)
 {
@@ -38,16 +12,23 @@ uint32_t gcd_u32(uint32_t a, uint32_t b)
         return b;
     if (b == 0)
         return a;
-    unsigned shift = ctz32(a | b);
-    a >>= ctz32(a);
+    unsigned shift = 0;
+    while (((a | b) & 1) == 0) { /* pa_both: a shared factor of two */
+        a >>= 1;
+        b >>= 1;
+        shift++;
+    }
+    while ((a & 1) == 0) /* pa_left: a odd from here on */
+        a >>= 1;
     do {
-        b >>= ctz32(b); /* a and b are odd from here on */
-        if (a > b) {
+        while ((b & 1) == 0) /* pa_right: b odd */
+            b >>= 1;
+        if (b < a) { /* pa_order: keep a <= b */
             uint32_t t = a;
             a = b;
             b = t;
         }
-        b -= a; /* even, or zero when a == b */
+        b -= a; /* pa_step: even, or zero when a == b */
     } while (b != 0);
     return a << shift;
 }
