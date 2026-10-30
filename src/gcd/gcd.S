@@ -1,14 +1,16 @@
 # gcd_u32_asm: binary GCD without a divider, hand-written RV32I.
 #
-# uint32_t gcd_u32_asm(uint32_t a, uint32_t b)       a0 = a, a1 = b; result in a0
+# uint32_t gcd_u32_asm(uint32_t a, uint32_t b)
+#                                         a0 = a, a1 = b; result in a0
 #
 # Stein's algorithm: the common power of two k = ctz(a | b) is set aside, both
 # operands are made odd, and gcd(a, b) = gcd(|a - b|, min(a, b)) runs until the
 # difference is zero. Three choices make it cheaper than the compiled C:
 #   * ctz by table: ctz_tab[x & 255] strips up to seven factors of two with
 #     andi/add/lbu/srl; an all-zero low byte (entry 8) repeats the step;
-#   * no swap: the loop exists twice, LB with the difference in b and LA with
-#     it in a, so "swap" is a jump to the other copy instead of three moves;
+#   * no swap: the loop exists twice, loop_b with the difference in b and
+#     loop_a with it in a, so "swap" is a jump to the other copy instead of
+#     three moves;
 #   * the difference of two odd numbers is even and nonzero until the end, so
 #     each subtraction goes straight into the strip of the operand it wrote.
 # Leaf routine: only caller-saved registers, no stack.
